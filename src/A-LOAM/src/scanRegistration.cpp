@@ -145,11 +145,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     removeClosedPointCloud(laserCloudIn, laserCloudIn, MINIMUM_RANGE);
 
     int cloudSize = laserCloudIn.points.size();
+    // 因为atan2( )默认返回逆时针角度，但是雷达通常是顺时针扫描的，所以往往取反
     float startOri = -atan2(laserCloudIn.points[0].y, laserCloudIn.points[0].x); //返回以弧度表示的 y/x 的反正切
     float endOri = -atan2(laserCloudIn.points[cloudSize - 1].y,
                           laserCloudIn.points[cloudSize - 1].x) +
                    2 * M_PI;
 
+    // 把角度限制在（M_PI,3*M_PI）
     if (endOri - startOri > 3 * M_PI)
     {
         endOri -= 2 * M_PI;
@@ -170,7 +172,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         point.x = laserCloudIn.points[i].x;
         point.y = laserCloudIn.points[i].y;
         point.z = laserCloudIn.points[i].z;
-
+        
         float angle = atan(point.z / sqrt(point.x * point.x + point.y * point.y)) * 180 / M_PI;
         int scanID = 0;
 
@@ -212,7 +214,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
             ROS_BREAK();
         }
         //printf("angle %f scanID %d \n", angle, scanID);
-
+        
         float ori = -atan2(point.y, point.x);
         if (!halfPassed)
         { 
@@ -242,7 +244,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
                 ori -= 2 * M_PI;
             }
         }
-
+        ROS_WARN("pt.x = %f , pt.y = %f , pt.z = %f , ori = %f , scanID = %d", point.x, point.y, point.z,ori,scanID);
         float relTime = (ori - startOri) / (endOri - startOri);
         point.intensity = scanID + scanPeriod * relTime;
         laserCloudScans[scanID].push_back(point); 
@@ -274,7 +276,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
         cloudNeighborPicked[i] = 0;
         cloudLabel[i] = 0;
     }
-
+    
 
     TicToc t_pts;
     //根据曲率计算四种特征点：边缘点特征：sharp、less_sharp；面特征：flat、less_flat
@@ -478,7 +480,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "scanRegistration");
-    ros::NodeHandle nh;
+    ros::NodeHandle nh;  // 全局的ros句柄
 
     nh.param<int>("scan_line", N_SCANS, 16);
 
